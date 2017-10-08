@@ -1,4 +1,6 @@
-package schemashark.tutorial;
+package schemashark;
+
+import java.io.File;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -9,17 +11,33 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class Main extends Application {
 	
 	Stage window;
 	TextArea textArea;
-	String loadedDocumentName;
-	boolean documentIsDirty;
+	Document document;
 
 	public static void main(String[] args) {
 		launch(args);
+	}
+	
+	private void fileOpen() {
+		if (!tryUnloadDocument()) {
+			return;
+		}
+		FileChooser dialog = new FileChooser();
+		dialog.setTitle("Open");
+		dialog.getExtensionFilters().addAll(
+				new FileChooser.ExtensionFilter("XML Schemas", "*.xsd"),
+				new FileChooser.ExtensionFilter("All Files", "*")
+		);
+		File f = dialog.showOpenDialog(window);
+		if (f != null) {
+			System.out.println(f.getName());
+		}
 	}
 	
 	private MenuBar buildMenuBar() {
@@ -33,6 +51,7 @@ public class Main extends Application {
 		
 		MenuItem fileOpenMI = new MenuItem("_Open...");
 		fileOpenMI.setAccelerator(KeyCombination.keyCombination("Shortcut+O"));
+		fileOpenMI.setOnAction(e -> fileOpen());
 		fileMenu.getItems().add(fileOpenMI);
 		
 		MenuItem fileSaveMI = new MenuItem("_Save");
@@ -58,23 +77,34 @@ public class Main extends Application {
 	
 	private void updateWindowTitle() {
 		StringBuilder sb = new StringBuilder();
-		if (documentIsDirty) {
+		if (document.isDirty()) {
 			sb.append('*');
 		}
-		sb.append(loadedDocumentName);
+		sb.append(document.getShortName());
 		sb.append(" - Schema Shark");
 		window.setTitle(sb.toString());
 	}
 	
-	private void tryClose() {
-		if (documentIsDirty) {
-			int result = AlertBox.display("SchemaShark", "Do you want to save changes to " + loadedDocumentName + "?", "Save", "Don't Save", "Cancel");
-			if (result == 0 || result == 3) {
-				// cancel
+	private boolean tryUnloadDocument() {
+		if (document.isDirty()) {
+			int result = AlertBox.display("SchemaShark", "Do you want to save changes to " + document.getShortName() + "?", "Save", "Don't Save", "Cancel");
+			if (result == 1) {
+				// save it
+				return true;
+			} else if (result == 2) {
+				// don't save it
+				return true;
 			} else {
-				window.close();
+				// cancel
+				return false;
 			}
 		} else {
+			return true;
+		}
+	}
+	
+	private void tryClose() {
+		if (tryUnloadDocument()) {
 			window.close();
 		}
 	}
@@ -87,15 +117,15 @@ public class Main extends Application {
 			tryClose();
 		});
 		
-		documentIsDirty = false;
-		loadedDocumentName = "Untitled";
+		document = new Document();
+		
 		updateWindowTitle();
 		
 		MenuBar menuBar = buildMenuBar();
 		
 		textArea = new TextArea();
 		textArea.setOnKeyTyped(e -> {
-			documentIsDirty = true;
+			document.setDirty();
 			updateWindowTitle();
 		});
 		

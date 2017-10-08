@@ -1,4 +1,4 @@
-package schemashark.tutorial;
+package schemashark;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
